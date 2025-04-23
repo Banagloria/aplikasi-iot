@@ -1,6 +1,8 @@
 #include <DHT.h>
 #include <WiFi.h>
 #include <BlynkSimpleEsp32.h>
+#define BLYNK_TEMPLATE_ID "TMPL6juCW96bi"
+#define BLYNK_TEMPLATE_NAME "Aplikasi Iot"
 
 // --------- Konfigurasi WiFi & Blynk ----------
 char auth[] = "g33I3ZoI_7AI_CBDL2ZareeD3KFicOsK";
