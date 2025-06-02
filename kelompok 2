@@ -1,0 +1,113 @@
+#define BLYNK_TEMPLATE_ID "TMPLxxxxxxx"
+#define BLYNK_TEMPLATE_NAME "SmartHomeProject"
+#define BLYNK_AUTH_TOKEN "YourAuthTokenHere"
+
+#include <WiFi.h>
+#include <BlynkSimpleEsp32.h>
+#include <DHT.h>
+
+char ssid[] = "YourWiFiSSID";
+char pass[] = "YourWiFiPassword";
+
+// --- DHT setup ---
+#define DHTPIN1 12
+#define DHTPIN2 14
+#define DHTTYPE DHT11
+
+DHT dht1(DHTPIN1, DHTTYPE);
+DHT dht2(DHTPIN2, DHTTYPE);
+
+// --- Lampu ---
+#define LAMPU1 4
+#define LAMPU2 5
+
+// --- Motor Kipas 1 (L298N) ---
+#define KIPAS1_IN1 16
+#define KIPAS1_IN2 17
+
+// --- Motor Kipas 2 (L298N) ---
+#define KIPAS2_IN1 18
+#define KIPAS2_IN2 19
+
+// --- Suhu ---
+float suhu1, suhu2;
+
+// --- Setup lampu dari Blynk ---
+BLYNK_WRITE(V0) {
+  digitalWrite(LAMPU1, param.asInt());
+}
+BLYNK_WRITE(V1) {
+  digitalWrite(LAMPU2, param.asInt());
+}
+
+void setup() {
+  Serial.begin(115200);
+
+  // Setup GPIO
+  pinMode(LAMPU1, OUTPUT);
+  pinMode(LAMPU2, OUTPUT);
+
+  pinMode(KIPAS1_IN1, OUTPUT);
+  pinMode(KIPAS1_IN2, OUTPUT);
+  pinMode(KIPAS2_IN1, OUTPUT);
+  pinMode(KIPAS2_IN2, OUTPUT);
+
+  // Mulai sensor DHT
+  dht1.begin();
+  dht2.begin();
+
+  // Koneksi Blynk
+  Blynk.begin(BLYNK_AUTH_TOKEN, ssid, pass);
+}
+
+void loop() {
+  Blynk.run();
+  bacaDanKirimSuhu();
+  kontrolKipas();
+  delay(2000); // Baca setiap 2 detik
+}
+
+void bacaDanKirimSuhu() {
+  suhu1 = dht1.readTemperature();
+  float hum1 = dht1.readHumidity();
+  suhu2 = dht2.readTemperature();
+  float hum2 = dht2.readHumidity();
+
+  if (isnan(suhu1) || isnan(hum1) || isnan(suhu2) || isnan(hum2)) {
+    Serial.println("Gagal membaca DHT11");
+    return;
+  }
+
+  Serial.print("Suhu1: "); Serial.print(suhu1); Serial.print(" | Hum1: "); Serial.println(hum1);
+  Serial.print("Suhu2: "); Serial.print(suhu2); Serial.print(" | Hum2: "); Serial.println(hum2);
+
+  // Kirim ke Blynk
+  Blynk.virtualWrite(V2, suhu1);
+  Blynk.virtualWrite(V3, hum1);
+  Blynk.virtualWrite(V4, suhu2);
+  Blynk.virtualWrite(V5, hum2);
+}
+
+void kontrolKipas() {
+  // Kipas 1
+  if (suhu1 > 30) {
+    digitalWrite(KIPAS1_IN1, HIGH);
+    digitalWrite(KIPAS1_IN2, LOW);
+    Blynk.virtualWrite(V6, 1); // Indikator ON
+  } else {
+    digitalWrite(KIPAS1_IN1, LOW);
+    digitalWrite(KIPAS1_IN2, LOW);
+    Blynk.virtualWrite(V6, 0); // Indikator OFF
+  }
+
+  // Kipas 2
+  if (suhu2 > 30) {
+    digitalWrite(KIPAS2_IN1, HIGH);
+    digitalWrite(KIPAS2_IN2, LOW);
+    Blynk.virtualWrite(V7, 1); // Indikator ON
+  } else {
+    digitalWrite(KIPAS2_IN1, LOW);
+    digitalWrite(KIPAS2_IN2, LOW);
+    Blynk.virtualWrite(V7, 0); // Indikator OFF
+  }
+}
